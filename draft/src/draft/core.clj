@@ -66,8 +66,18 @@
 
 (defn traverse [acc root]
   (if (not-empty root)
-    (conj acc  (mapv #(traverse (conj acc (:hasValue %)) (:walk %)) root))
+    (conj acc (mapv #(traverse (conj acc (:hasValue %)) (:walk %)) root))
     acc))
+
+(defn find* [acc ds v]
+  (if-let [found (first (filter #(= (:hasValue %) v) ds))]
+    (conj acc (dissoc found :walk))
+    (first (filter #(not-empty %)
+                   (mapv #(find* (conj acc (dissoc % :walk)) (:walk %) v)
+                         (filter #(not-empty (:walk %)) ds))))))
+
+(defn find [ds v]
+  (find* [] ds  v))
 
 (def t86 "http://dbpedia.org/resource/Toyota_86")
 (def imp "http://dbpedia.org/resource/Subaru_Impreza")
@@ -78,7 +88,9 @@
 
   (def lol (flatten (traverse [] t86-results)))
   (def kek (flatten (traverse [] imp-results)))
-  (clojure.set/intersection (set lol) (set kek)))
+  (clojure.set/intersection (set lol) (set kek))
+
+  )
 
 
 (comment
@@ -99,4 +111,3 @@
   (spit "t86-results" t86-results)
 
   (spit "imp-results" imp-results))
-
