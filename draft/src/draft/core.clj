@@ -79,35 +79,65 @@
 (defn find [ds v]
   (find* [] ds  v))
 
-(def t86 "http://dbpedia.org/resource/Toyota_86")
-(def imp "http://dbpedia.org/resource/Subaru_Impreza")
+(defn cutoff [is chain]
+  (let [l (map :hasValue (butlast chain))]
+    (empty? (clojure.set/intersection (set l) is))))
+
+(defn links [ds1 ds2]
+  (let [d1 (flatten (traverse [] ds1))
+        d2 (flatten (traverse [] ds2))
+        is (clojure.set/intersection (set d1) (set d2))
+        d1-chains (filterv (partial cutoff is) (map #(find ds1 %) is))
+        d2-chains (filterv (partial cutoff is) (map #(find ds2 %) is))]
+    [d1-chains d2-chains]))
+
+(defn join-links [d1-chains d2-chains]
+  (mapv
+   (fn [c]
+     (let [chain2 (first (filter #(= (last %) (last c)) d2-chains))]
+       (into c (vec (reverse (butlast chain2))))))
+   d1-chains))
+
+(defn build-edges [chain]
+  (let [fst (first chain)
+        lst (last chain)
+        ae {:f "a"
+            :t (:hasValue fst)
+            :l (:property fst)}
+        eb {:f (:hasValue lst)
+            :t "b"
+            :l (:property lst)}
+        others
+        (reduce
+         (fn [acc i]
+           (let [prev (nth chain (dec i))
+                 cur (nth chain i)]
+             (conj acc {:f (:hasValue prev)
+                        :t (:hasValue cur)
+                        :l (:property cur)})))
+         [] (range 1 (count chain)))]
+    (vec (concat [ae] others [eb]))))
+
+(defn build-all [ds1 ds2]
+  (mapv
+   build-edges
+   (let [[a b] (links ds1 ds2)]
+     (join-links a b))))
+
+(defn rel [q1 q2 d]
+  (let [ds1 (future (walk q1 d))
+        ds2 (future (walk q2 d))]
+    (build-all @ds1 @ds2)))
 
 (comment
-  (def t86-results (walk t86 3))
-  (def imp-results (walk imp 3))
+  (def t86 "http://dbpedia.org/resource/Toyota_86")
+  (def imp "http://dbpedia.org/resource/Subaru_Impreza")
 
-  (def lol (flatten (traverse [] t86-results)))
-  (def kek (flatten (traverse [] imp-results)))
-  (clojure.set/intersection (set lol) (set kek))
+  (def test1 (rel t86 imp 2))
+
+  (def rofls-royce "http://dbpedia.org/resource/Lada_Kalina")
+  (def lmaoborghini "http://dbpedia.org/resource/Lamborghini_Aventador")
+
+  (def le-mans (rel rofls-royce lmaoborghini 2))
 
   )
-
-
-(comment
-  (def t86-results2 (walk t86 2))
-  (def imp-results2 (walk imp 2))
-
-  (def t86-results1 (walk t86 1))
-  (def imp-results1 (walk imp 1))
-
-  (def lol1 (flatten (traverse [] t86-results1)))
-  (def kek1 (flatten (traverse [] imp-results1)))
-  (clojure.set/intersection (set lol1) (set kek1))
-
-  (def lol2 (flatten (traverse [] t86-results2)))
-  (def kek2 (flatten (traverse [] imp-results2)))
-  (count (clojure.set/intersection (set lol2) (set kek2)))
-
-  (spit "t86-results" t86-results)
-
-  (spit "imp-results" imp-results))
