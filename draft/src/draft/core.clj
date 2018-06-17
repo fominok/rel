@@ -53,9 +53,6 @@
      (not-any? #(% r) stop-words))
    result-set))
 
-(def t86 "http://dbpedia.org/resource/Toyota_86")
-(def imp "http://dbpedia.org/resource/Subaru_Impreza")
-
 (defn walk [root lvl]
   (cond
     (= lvl 0) nil
@@ -67,8 +64,39 @@
                filter-results)]
       (mapv #(assoc % :walk (walk (:hasValue %) (dec lvl))) st))))
 
-(def t86-results (walk t86 2))
-(def imp-results (walk imp 2))
+(defn traverse [acc root]
+  (if (not-empty root)
+    (conj acc  (mapv #(traverse (conj acc (:hasValue %)) (:walk %)) root))
+    acc))
 
-(spit "t86-results" t86-results)
-(spit "imp-results" imp-results)
+(def t86 "http://dbpedia.org/resource/Toyota_86")
+(def imp "http://dbpedia.org/resource/Subaru_Impreza")
+
+(comment
+  (def t86-results (walk t86 3))
+  (def imp-results (walk imp 3))
+
+  (def lol (flatten (traverse [] t86-results)))
+  (def kek (flatten (traverse [] imp-results)))
+  (clojure.set/intersection (set lol) (set kek)))
+
+
+(comment
+  (def t86-results2 (walk t86 2))
+  (def imp-results2 (walk imp 2))
+
+  (def t86-results1 (walk t86 1))
+  (def imp-results1 (walk imp 1))
+
+  (def lol1 (flatten (traverse [] t86-results1)))
+  (def kek1 (flatten (traverse [] imp-results1)))
+  (clojure.set/intersection (set lol1) (set kek1))
+
+  (def lol2 (flatten (traverse [] t86-results2)))
+  (def kek2 (flatten (traverse [] imp-results2)))
+  (count (clojure.set/intersection (set lol2) (set kek2)))
+
+  (spit "t86-results" t86-results)
+
+  (spit "imp-results" imp-results))
+
