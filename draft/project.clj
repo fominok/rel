@@ -4,7 +4,9 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 #_[clj-sparql "0.2.0"] ;; Inlining this
+                 [ring/ring-json "0.4.0"]
+                 [ring "1.7.0-RC1"]
+                 [http-kit "2.2.0"]
                  [org.apache.jena/jena-arq "2.12.0"]]
   :main ^:skip-aot draft.core
   :target-path "target/%s"

@@ -1,6 +1,11 @@
 (ns draft.core
   (:require [clj-sparql.core :as q]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.set :as st]
+            [ring.middleware.json :refer [wrap-json-response]]
+            [ring.middleware.params :refer [wrap-params]]
+            [ring.util.response :refer [response]]
+            [org.httpkit.server :refer [run-server]])
   (:gen-class))
 
 (defn req [x]
@@ -24,11 +29,6 @@
   { ?isValueOf ?property <%s> }
   }
   " x x))
-
-(defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
-  (println "Hello, World!"))
 
 (def stop-words
   [
@@ -81,12 +81,12 @@
 
 (defn cutoff [is chain]
   (let [l (map :hasValue (butlast chain))]
-    (empty? (clojure.set/intersection (set l) is))))
+    (empty? (st/intersection (set l) is))))
 
 (defn links [ds1 ds2]
   (let [d1 (flatten (traverse [] ds1))
         d2 (flatten (traverse [] ds2))
-        is (clojure.set/intersection (set d1) (set d2))
+        is (st/intersection (set d1) (set d2))
         d1-chains (filterv (partial cutoff is) (map #(find ds1 %) is))
         d2-chains (filterv (partial cutoff is) (map #(find ds2 %) is))]
     [d1-chains d2-chains]))
@@ -129,6 +129,22 @@
         ds2 (future (walk q2 d))]
     (build-all @ds1 @ds2)))
 
+(defn handler [request]
+  (let [params (:params request)]
+    (response {:dir (rel (get params "a")
+                         (get params "b")
+                         (Integer/parseInt (get params "d")))})))
+
+(def app
+  (-> handler
+      wrap-json-response
+      wrap-params))
+
+(defn -main
+  [& args]
+  (println "Running server at port 8080")
+  (run-server app {:port 8080}))
+
 (comment
   (def t86 "http://dbpedia.org/resource/Toyota_86")
   (def imp "http://dbpedia.org/resource/Subaru_Impreza")
@@ -139,5 +155,4 @@
   (def lmaoborghini "http://dbpedia.org/resource/Lamborghini_Aventador")
 
   (def le-mans (rel rofls-royce lmaoborghini 2))
-
   )
