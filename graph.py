@@ -1,25 +1,48 @@
 import networkx as nx
 import matplotlib.pyplot as plt
-import random
+import json
 
-_dir = [
-        [{"f": "x", "t": "y", "l": "label",}, {"f": "y", "t": "z", "l": "label2",}, {"f": "z", "t": "a", "l": "k",},],
-        [{"f": "x", "t": "b", "l": "kek",}, {"f": "b", "t": "a", "l": "label4",},],
-        [{"f": "x", "t": "f", "l": "1337",}, {"f": "f", "t": "a", "l": "420",},],
-]
+import urllib.request
+
+print("Input 2 objects and depth to find rels ...")
+a = input("First object: ")
+b = input("Second object: ")
+d = input("Depth: ")
+
+_str = 'http://localhost:8080/?a=http://dbpedia.org/resource/{0}&b=http://dbpedia.org/resource/{1}&d={2}'.format(a, b, d)
+with urllib.request.urlopen(_str) as response:
+    resp = response.read().decode('utf-8')
+    r = json.loads(resp)
+    _dir = r['dir']
+
 G=nx.Graph()
 
 for x in _dir:
     for y in x:
-        G.add_node(y['f'])
-        G.add_node(y['t'])
-        G.add_edge(y['f'], y['t'], l=y['l'])
+        if len(y['f'].split('/')) > 1:
+            f = y['f'].split('/')[-1]
+        else:
+            f = a
+        G.add_node(f)
+
+        if len(y['t'].split('/')) > 1:
+            t = y['t'].split('/')[-1]
+        else:
+            t = b
+        G.add_node(t)
+
+        if len(y['l'].split('/')) > 1:
+            l = y['l'].split('/')[-1]
+        else:
+            l = y['l']
+        G.add_edge(f, t, l=l)
 
 
+pos = nx.circular_layout(G)
 
-nx.draw(G, with_labels=True)
+nx.draw(G, with_labels=True, pos=pos, node_size=700)
 edge_labels = nx.get_edge_attributes(G,'l')
-nx.draw_networkx_edge_labels(G, pos=nx.spring_layout(G), edge_labels = edge_labels, label_pos=0.3)
+nx.draw_networkx_edge_labels(G, pos=pos, edge_labels = edge_labels)
 
 manager = plt.get_current_fig_manager()
 manager.resize(*manager.window.maxsize())
