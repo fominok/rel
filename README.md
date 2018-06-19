@@ -20,6 +20,6 @@ if you like.
 
 Example input:
 
-    http://dbpedia.org/resource/Lada_Kalina
-    http://dbpedia.org/resource/Lamborghini_Aventador
+    Lada_Kalina
+    Lamborghini_Aventador
     2
